@@ -1,113 +1,33 @@
+-- Tablespaces
+CREATE TABLESPACE user_data_space OWNER postgres LOCATION 'C:/PostgresTablespace/user_data';
+CREATE TABLESPACE index_space OWNER postgres LOCATION 'C:/PostgresTablespace/index_data';
 
--- СХЕМА: project
-CREATE TABLE project.projects (
-    project_id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    description TEXT,
-    start_date DATE,
-    end_date DATE,
-    status TEXT,
-    manager_id INT REFERENCES core.users(user_id)
-);
+-- Перенос на tablespace (раньше было без них)
+ALTER TABLE project.projects SET TABLESPACE user_data_space;
+ALTER TABLE project.sprints SET TABLESPACE user_data_space;
+ALTER TABLE project.tasks SET TABLESPACE user_data_space;
+ALTER TABLE project.task_assignments SET TABLESPACE user_data_space;
+ALTER TABLE project.comments SET TABLESPACE user_data_space;
+ALTER TABLE project.attachments SET TABLESPACE user_data_space;
+ALTER TABLE project.task_log SET TABLESPACE user_data_space;
 
-CREATE TABLE project.sprints (
-    sprint_id SERIAL PRIMARY KEY,
-    project_id INT REFERENCES project.projects(project_id),
-    name TEXT NOT NULL,
-    start_date DATE,
-    end_date DATE
-);
+ALTER TABLE core.roles SET TABLESPACE user_data_space;
+ALTER TABLE core.permissions SET TABLESPACE user_data_space;
+ALTER TABLE core.users SET TABLESPACE user_data_space;
+ALTER TABLE core.user_roles SET TABLESPACE user_data_space;
+ALTER TABLE core.role_permissions SET TABLESPACE user_data_space;
 
-CREATE TABLE project.tasks (
-    task_id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    description TEXT,
-    priority TEXT,
-    status TEXT,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    deadline DATE,
-    parent_task_id INT REFERENCES project.tasks(task_id),
-    project_id INT REFERENCES project.projects(project_id),
-    sprint_id INT REFERENCES project.sprints(sprint_id)
-);
+ALTER TABLE analytics.workload_summary SET TABLESPACE user_data_space;
 
-CREATE TABLE project.task_assignments (
-    task_id INT REFERENCES project.tasks(task_id),
-    user_id INT REFERENCES core.users(user_id),
-    PRIMARY KEY (task_id, user_id)
-);
+-- Индексы
+CREATE INDEX idx_tasks_project_id ON project.tasks(project_id) TABLESPACE index_space;
+CREATE INDEX idx_tasks_status ON project.tasks(status) TABLESPACE index_space;
+CREATE INDEX idx_tasks_sprint_id ON project.tasks(sprint_id) TABLESPACE index_space;
+CREATE INDEX idx_projects_manager_id ON project.projects(manager_id) TABLESPACE index_space;
+CREATE INDEX idx_task_assignments_user_id ON project.task_assignments(user_id) TABLESPACE index_space;
+CREATE INDEX idx_comments_task_id ON project.comments(task_id) TABLESPACE index_space;
 
-CREATE TABLE project.comments (
-    comment_id SERIAL PRIMARY KEY,
-    task_id INT REFERENCES project.tasks(task_id),
-    user_id INT REFERENCES core.users(user_id),
-    text TEXT,
-    created_at TIMESTAMP
-);
-
-CREATE TABLE project.attachments (
-    attachment_id SERIAL PRIMARY KEY,
-    task_id INT REFERENCES project.tasks(task_id),
-    filename TEXT,
-    file_url TEXT,
-    filetype TEXT
-);
-
-CREATE TABLE project.task_log (
-    log_id SERIAL PRIMARY KEY,
-    task_id INT REFERENCES project.tasks(task_id),
-    user_id INT REFERENCES core.users(user_id),
-    action TEXT,
-    changed_at TIMESTAMP
-);
-
--- СХЕМА: core
-CREATE TABLE core.roles (
-    role_id SERIAL PRIMARY KEY,
-    role_name TEXT NOT NULL,
-    description TEXT
-);
-
-CREATE TABLE core.permissions (
-    permission_id SERIAL PRIMARY KEY,
-    permission_name TEXT NOT NULL,
-    description TEXT
-);
-
-CREATE TABLE core.users (
-    user_id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    contact_info TEXT
-);
-
-CREATE TABLE core.user_roles (
-    user_id INT REFERENCES core.users(user_id),
-    role_id INT REFERENCES core.roles(role_id),
-    PRIMARY KEY (user_id, role_id)
-);
-
-CREATE TABLE core.role_permissions (
-    role_id INT REFERENCES core.roles(role_id),
-    permission_id INT REFERENCES core.permissions(permission_id),
-    PRIMARY KEY (role_id, permission_id)
-);
-
-INSERT INTO project.sprints 
-
--- СХЕМА: analytics
-CREATE TABLE analytics.workload_summary (
-    summary_id SERIAL PRIMARY KEY,
-    user_id INT REFERENCES core.users(user_id),
-    project_id INT REFERENCES project.projects(project_id),
-    open_tasks_count INT,
-    closed_tasks_count INT,
-    sprint_id INT REFERENCES project.sprints(sprint_id)
-);
 -- НАПОЛНЕНИЕ ДАННЫМИ (тестовые)
-
 -- Роли
 INSERT INTO core.roles (role_name, description) VALUES
 ('Администратор', 'Полные права'),
