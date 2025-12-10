@@ -1,4 +1,4 @@
-
+-- ====== СОЗДАНИЕ СХЕМ ======
 -- СХЕМА: project
 CREATE TABLE project.projects (
     project_id SERIAL PRIMARY KEY,
@@ -185,7 +185,7 @@ INSERT INTO analytics.workload_summary (user_id, project_id, open_tasks_count, c
 (3, 1, 2, 1, 1),
 (1, 2, 5, 0, 3);
 
--- Комментарии к таблицам и столбцам
+-- ====== КОММЕНТЕРИИ К ТАБЛИЦАМ ======
 COMMENT ON TABLE core.users IS 'Пользователи системы управления проектами';
 COMMENT ON COLUMN core.users.user_id IS 'Идентификатор пользователя (PK)';
 COMMENT ON COLUMN core.users.name IS 'ФИО или никнейм пользователя';
@@ -273,7 +273,7 @@ COMMENT ON COLUMN analytics.workload_summary.open_tasks_count IS 'Количес
 COMMENT ON COLUMN analytics.workload_summary.closed_tasks_count IS 'Количество закрытых задач у пользователя по проекту/спринту';
 COMMENT ON COLUMN analytics.workload_summary.sprint_id IS 'Спринт (FK)';
 
--- НАПОЛНЕНИЕ ДАННЫМИ (тестовые)
+-- ====== НАПОЛНЕНИЕ ДАННЫМИ ======
 ALTER TABLE tasks
 ADD COLUMN user_id INTEGER;
 
@@ -371,8 +371,6 @@ SET user_id = CASE
     WHEN task_id % 5 = 0 THEN NULL
     ELSE 1 + ((task_id - 1) % 50)
 END;
-
--- Реалистичные примерные шаблоны комментариев
 WITH texts AS (
   SELECT unnest(ARRAY[
     'Выполнил часть задачи, осталось согласовать с командой.',
@@ -602,4 +600,506 @@ FROM (
 ) AS n(user_id, fullname, city)
 WHERE core.users.user_id = n.user_id;
 
+INSERT INTO core.user_roles (user_id, role_id) VALUES (2, 2);
+INSERT INTO core.user_roles (user_id, role_id) VALUES (3, 2);
+INSERT INTO core.user_roles (user_id, role_id) VALUES (4, 2);
+INSERT INTO core.user_roles (user_id, role_id) VALUES (5, 2);
+INSERT INTO core.user_roles (user_id, role_id) VALUES (6, 2);
+INSERT INTO core.user_roles (user_id, role_id) VALUES (7, 2);
+INSERT INTO core.user_roles (user_id, role_id) VALUES (8, 2);
+INSERT INTO core.user_roles (user_id, role_id) VALUES (9, 2);
+INSERT INTO core.user_roles (user_id, role_id) VALUES (10, 2);
+INSERT INTO core.user_roles (user_id, role_id) VALUES (11, 2);
 
+INSERT INTO core.user_roles (user_id, role_id) VALUES (12, 3);
+INSERT INTO core.user_roles (user_id, role_id) VALUES (13, 3);
+INSERT INTO core.user_roles (user_id, role_id) VALUES (14, 3);
+INSERT INTO core.user_roles (user_id, role_id) VALUES (15, 3);
+INSERT INTO core.user_roles (user_id, role_id) VALUES (16, 3);
+INSERT INTO core.user_roles (user_id, role_id) VALUES (17, 3);
+INSERT INTO core.user_roles (user_id, role_id) VALUES (18, 3);
+INSERT INTO core.user_roles (user_id, role_id) VALUES (19, 3);
+INSERT INTO core.user_roles (user_id, role_id) VALUES (20, 3);
+INSERT INTO core.user_roles (user_id, role_id) VALUES (21, 3);
+
+INSERT INTO core.user_roles (user_id, role_id) VALUES (21, 3);
+
+
+-- ====== ИНДЕКСЫ ======
+-- индексы для project
+CREATE INDEX IF NOT EXISTS idx_projects_manager_id
+    ON project.projects (manager_id);
+
+CREATE INDEX IF NOT EXISTS idx_sprints_project_id
+    ON project.sprints (project_id);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_project_id
+    ON project.tasks (project_id);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_sprint_id
+    ON project.tasks (sprint_id);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_user_id
+    ON project.tasks (user_id);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_status
+    ON project.tasks (status);
+
+CREATE INDEX IF NOT EXISTS idx_task_assignments_task_id
+    ON project.task_assignments (task_id);
+
+CREATE INDEX IF NOT EXISTS idx_task_assignments_user_id
+    ON project.task_assignments (user_id);
+
+CREATE INDEX IF NOT EXISTS idx_comments_task_id
+    ON project.comments (task_id);
+
+CREATE INDEX IF NOT EXISTS idx_comments_user_id
+    ON project.comments (user_id);
+
+CREATE INDEX IF NOT EXISTS idx_attachments_task_id
+    ON project.attachments (task_id);
+
+CREATE INDEX IF NOT EXISTS idx_task_log_task_id
+    ON project.task_log (task_id);
+
+CREATE INDEX IF NOT EXISTS idx_task_log_user_id
+    ON project.task_log (user_id);
+
+-- индексы для core
+CREATE INDEX IF NOT EXISTS idx_user_roles_user_id
+    ON core.user_roles (user_id);
+
+CREATE INDEX IF NOT EXISTS idx_user_roles_role_id
+    ON core.user_roles (role_id);
+
+CREATE INDEX IF NOT EXISTS idx_role_permissions_role_id
+    ON core.role_permissions (role_id);
+
+CREATE INDEX IF NOT EXISTS idx_role_permissions_permission_id
+    ON core.role_permissions (permission_id);
+
+-- индексы для analytics
+CREATE INDEX IF NOT EXISTS idx_workload_user_id
+    ON analytics.workload_summary (user_id);
+
+CREATE INDEX IF NOT EXISTS idx_workload_project_id
+    ON analytics.workload_summary (project_id);
+
+CREATE INDEX IF NOT EXISTS idx_workload_sprint_id
+    ON analytics.workload_summary (sprint_id);
+
+
+--================= 2 часть ==============================
+-- ===== РОЛИ =====
+-- роли
+CREATE ROLE app_admin NOINHERIT;
+CREATE ROLE project_manager NOINHERIT;
+CREATE ROLE developer_user NOINHERIT;
+
+-- логин-пользователи
+CREATE ROLE user_admin LOGIN PASSWORD 'admadm123';
+CREATE ROLE user_pm    LOGIN PASSWORD 'pmpmpm123';
+CREATE ROLE user_dev1  LOGIN PASSWORD 'devdev123';
+CREATE ROLE user_dev2  LOGIN PASSWORD 'devved123';
+
+GRANT app_admin       TO user_admin;
+GRANT project_manager TO user_pm;
+GRANT developer_user  TO user_dev1;
+GRANT developer_user  TO user_dev2;
+
+-- схемы
+GRANT USAGE ON SCHEMA core, project, analytics
+TO app_admin, project_manager, developer_user;
+
+GRANT CREATE ON SCHEMA core, project, analytics TO app_admin;
+
+-- core
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON ALL TABLES IN SCHEMA core
+TO app_admin;
+
+GRANT SELECT
+ON ALL TABLES IN SCHEMA core
+TO project_manager;
+
+GRANT SELECT
+ON core.users
+TO developer_user;
+
+REVOKE ALL ON core.roles, core.permissions, core.user_roles, core.role_permissions
+FROM developer_user;
+
+-- project
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON project.projects,
+   project.sprints,
+   project.tasks,
+   project.comments,
+   project.attachments,
+   project.task_log,
+   project.task_assignments
+TO app_admin, project_manager;
+
+GRANT SELECT
+ON project.projects,
+   project.sprints,
+   project.tasks,
+   project.comments,
+   project.attachments,
+   project.task_log
+TO developer_user;
+
+GRANT INSERT
+ON project.comments,
+   project.attachments
+TO developer_user;
+
+-- analytics
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON analytics.workload_summary
+TO app_admin, project_manager;
+
+GRANT SELECT
+ON analytics.workload_summary
+TO developer_user;
+
+-- default privileges
+ALTER DEFAULT PRIVILEGES IN SCHEMA core
+   GRANT SELECT ON TABLES TO project_manager, developer_user;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA project
+   GRANT SELECT ON TABLES TO project_manager, developer_user;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA project
+   GRANT INSERT, UPDATE, DELETE ON TABLES TO app_admin, project_manager;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA analytics
+   GRANT SELECT ON TABLES TO project_manager, developer_user;
+
+
+-- ===== VIEW: детализированный список задач =====
+CREATE VIEW project.v_task_details AS
+SELECT
+    t.task_id,
+    t.name           AS task_name,
+    t.description    AS task_description,
+    t.status,
+    t.priority,
+    t.created_at,
+    t.updated_at,
+    t.deadline,
+    p.project_id,
+    p.name           AS project_name,
+    s.sprint_id,
+    s.name           AS sprint_name,
+    u.user_id,
+    u.name           AS user_name
+FROM project.tasks      t
+LEFT JOIN project.projects p ON p.project_id = t.project_id
+LEFT JOIN project.sprints s ON s.sprint_id = t.sprint_id
+LEFT JOIN core.users u ON u.user_id  = t.user_id;
+
+COMMENT ON VIEW project.v_task_details IS 'Расширенное представление по задачам с проектом, спринтом и исполнителем';
+
+-- Оконная функция (ранжирование пользователей по количеству открытых задач)
+CREATE OR REPLACE VIEW analytics.v_user_rank_by_open_tasks AS
+SELECT
+    user_id,
+    project_id,
+    open_tasks_count,
+    RANK() OVER (PARTITION BY project_id ORDER BY open_tasks_count DESC) AS open_rank
+FROM analytics.workload_summary;
+COMMENT ON VIEW analytics.v_user_rank_by_open_tasks IS
+'Аналитическое представление с ранком пользователя по количеству открытых задач в проекте';
+SELECT *
+FROM analytics.v_user_rank_by_open_tasks
+ORDER BY project_id, open_rank
+LIMIT 50;
+
+-- ===== MATERIALIZED VIEW: агрегированная нагрузка по пользователям =====
+CREATE MATERIALIZED VIEW analytics.mv_user_workload AS
+SELECT
+    u.user_id,
+    u.name                           AS user_name,
+    p.project_id,
+    p.name                           AS project_name,
+    COUNT(*) FILTER (WHERE t.status IN ('новая','в работе', 'тест'))  AS open_tasks,
+    COUNT(*) FILTER (WHERE t.status IN ('готова','отложена'))      AS closed_tasks,
+    MAX(t.updated_at)                AS last_activity_at
+FROM core.users        u
+JOIN project.tasks     t ON t.user_id = u.user_id
+JOIN project.projects  p ON p.project_id = t.project_id
+GROUP BY u.user_id, u.name, p.project_id, p.name
+WITH NO DATA;
+
+COMMENT ON MATERIALIZED VIEW analytics.mv_user_workload IS 'Агрегированная нагрузка по задачам на пользователей и проекты';
+
+CREATE INDEX IF NOT EXISTS idx_mv_user_workload_user
+    ON analytics.mv_user_workload (user_id);
+
+CREATE INDEX IF NOT EXISTS idx_mv_user_workload_project
+    ON analytics.mv_user_workload (project_id);
+
+-- ===== ФУНКЦИЯ ДЛЯ ОБНОВЛЕНИЯ MAT VIEW =====
+CREATE FUNCTION analytics.refresh_mv_user_workload()
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    REFRESH MATERIALIZED VIEW analytics.mv_user_workload;
+END;
+$$;
+
+COMMENT ON FUNCTION analytics.refresh_mv_user_workload() IS 'Обновление материализованного представления по нагрузке пользователей';
+COMMENT ON VIEW project.v_task_details IS 'Представление для запросов бэкенда и отчётов по задачам';
+COMMENT ON MATERIALIZED VIEW analytics.mv_user_workload IS 'Материализованная витрина нагрузки по пользователям и проектам';
+
+-- Тестим вью
+SELECT * 
+FROM project.v_task_details
+LIMIT 20;
+
+
+SELECT analytics.refresh_mv_user_workload();
+SELECT *
+FROM analytics.mv_user_workload
+LIMIT 20;
+
+-- ========== ТРИГГЕРЫ =========
+-- Изменение статуса задачи и запись в тасклог
+-- функция-триггер
+CREATE OR REPLACE FUNCTION project.fn_task_status_log()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF TG_OP = 'UPDATE'
+       AND NEW.status IS DISTINCT FROM OLD.status
+    THEN
+        INSERT INTO project.task_log (task_id, user_id, action, changed_at)
+        VALUES (
+            NEW.task_id,
+            NEW.user_id,
+            'status_change: ' || COALESCE(OLD.status, 'NULL') || ' -> ' || COALESCE(NEW.status, 'NULL'),
+            now()
+        );
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_task_status_log ON project.tasks;
+
+CREATE TRIGGER trg_task_status_log
+AFTER UPDATE ON project.tasks
+FOR EACH ROW
+EXECUTE FUNCTION project.fn_task_status_log();
+
+
+-- триггер на таблицу задач
+CREATE TRIGGER trg_task_status_log
+AFTER UPDATE ON project.tasks
+FOR EACH ROW
+EXECUTE FUNCTION project.fn_task_status_log();
+-- тестим
+UPDATE project.tasks
+SET status = 'в работе'
+WHERE task_id = 42;
+
+SELECT *
+FROM project.task_log
+WHERE task_id = 42
+ORDER BY changed_at DESC
+LIMIT 5;
+
+
+--======= ПРОЦЕДУРЫ И ФУНКЦИИ ==========
+-- Функция: задачи пользователя
+CREATE OR REPLACE FUNCTION project.fn_get_user_tasks(
+    p_user_id  integer,
+    p_status   text DEFAULT NULL
+)
+RETURNS TABLE (
+    task_id      integer,
+    task_name    text,
+    status       text,
+    priority     text,
+    project_id   integer,
+    project_name text,
+    sprint_id    integer,
+    sprint_name  text
+)
+LANGUAGE sql
+AS $$
+SELECT
+    t.task_id,
+    t.name,
+    t.status,
+    t.priority,
+    p.project_id,
+    p.name,
+    s.sprint_id,
+    s.name
+FROM project.tasks   t
+JOIN project.projects p ON p.project_id = t.project_id
+LEFT JOIN project.sprints s ON s.sprint_id = t.sprint_id
+WHERE t.user_id = p_user_id
+  AND (p_status IS NULL OR t.status = p_status);
+$$;
+
+-- Функция: нагрузка по пользователю
+CREATE OR REPLACE FUNCTION analytics.fn_get_user_workload(
+    p_user_id integer
+)
+RETURNS TABLE (
+    project_id    integer,
+    project_name  text,
+    open_tasks    integer,
+    closed_tasks  integer
+)
+LANGUAGE sql
+AS $$
+SELECT
+    p.project_id,
+    p.name,
+    COUNT(*) FILTER (WHERE t.status IN ('новая','в работе')) AS open_tasks,
+    COUNT(*) FILTER (WHERE t.status IN ('сделана','закрыта')) AS closed_tasks
+FROM project.tasks   t
+JOIN project.projects p ON p.project_id = t.project_id
+WHERE t.user_id = p_user_id
+GROUP BY p.project_id, p.name;
+$$;
+
+-- Процедура: создать задачу + лог
+CREATE OR REPLACE PROCEDURE project.sp_create_task(
+    p_name        text,
+    p_description text,
+    p_priority    text,
+    p_status      text,
+    p_project_id  integer,
+    p_sprint_id   integer,
+    p_user_id     integer,
+    p_deadline    timestamptz
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_task_id integer;
+BEGIN
+    INSERT INTO project.tasks (
+        name, description, priority, status,
+        created_at, updated_at, deadline,
+        project_id, sprint_id, user_id
+    )
+    VALUES (
+        p_name, p_description, p_priority, p_status,
+        now(), now(), p_deadline,
+        p_project_id, p_sprint_id, p_user_id
+    )
+    RETURNING task_id INTO v_task_id;
+
+    INSERT INTO project.task_log (task_id, user_id, action, changed_at)
+    VALUES (v_task_id, p_user_id, 'created', now());
+END;
+$$;
+
+
+--Процедура: закрыть задачу + лог
+CREATE OR REPLACE PROCEDURE project.sp_close_task(
+    p_task_id integer,
+    p_user_id integer,
+    p_new_status text DEFAULT 'сделана'
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE project.tasks
+    SET status = p_new_status,
+        updated_at = now()
+    WHERE task_id = p_task_id;
+
+    INSERT INTO project.task_log (task_id, user_id, action, changed_at)
+    VALUES (p_task_id, p_user_id, 'closed_to: ' || p_new_status, now());
+END;
+$$;
+
+-- тестим
+CALL project.sp_create_task('Тестовая задача', 'описание', 'высокий', 'новая', 1, 1, 10, now() + interval '7 days');
+CALL project.sp_close_task(42, 10, 'готова');
+
+SELECT * FROM project.fn_get_user_tasks(1, 'в работе');
+SELECT * FROM analytics.fn_get_user_workload(10);
+
+SELECT *
+FROM analytics.fn_get_user_workload(21);
+
+
+-- ============ Рекурсивные запросы ==========
+CREATE OR REPLACE VIEW project.v_task_tree AS
+WITH RECURSIVE task_tree AS (
+    -- корень: задачи без родителя
+    SELECT
+        t.task_id,
+        t.name,
+        t.parent_task_id,
+        t.project_id,
+        1          AS level,
+        t.name::text AS path
+    FROM project.tasks t
+    WHERE t.parent_task_id IS NULL
+
+    UNION ALL
+
+    -- рекурсивная часть: подзадачи
+    SELECT
+        c.task_id,
+        c.name,
+        c.parent_task_id,
+        c.project_id,
+        p.level + 1 AS level,
+        (p.path || ' / ' || c.name)::text AS path
+    FROM project.tasks c
+    JOIN task_tree p ON c.parent_task_id = p.task_id
+)
+SELECT
+    task_id,
+    name,
+    parent_task_id,
+    project_id,
+    level,
+    path
+FROM task_tree;
+
+-- тестим
+SELECT *
+FROM project.v_task_tree
+ORDER BY project_id, path;
+
+WITH RECURSIVE task_tree AS (
+    SELECT
+        t.task_id,
+        t.name,
+        t.parent_task_id,
+        t.project_id,
+        1 AS level,
+        t.name::text AS path
+    FROM project.tasks t
+    WHERE t.task_id = 59
+
+    UNION ALL
+
+    SELECT
+        c.task_id,
+        c.name,
+        c.parent_task_id,
+        c.project_id,
+        p.level + 1,
+        (p.path || ' / ' || c.name)::text
+    FROM project.tasks c
+    JOIN task_tree p ON c.parent_task_id = p.task_id
+)
+SELECT *
+FROM task_tree
+ORDER BY level, task_id;
